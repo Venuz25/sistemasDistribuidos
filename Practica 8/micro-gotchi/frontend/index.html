@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>API-gotchi</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --panel: #0f1117;
+            --panel2: #13151e;
+            --border: #1e2235;
+            --cyan: #00f5ff;
+            --pink: #ff2d78;
+            --yellow: #ffe600;
+            --green: #00ff88;
+            --purple: #7c3aed;
+            --text: #e0e8ff;
+            --muted: #4a5280;
+            --glow-cyan: 0 0 20px rgba(0, 245, 255, 0.4);
+            --glow-pink: 0 0 20px rgba(255, 45, 120, 0.4);
+            --glow-green: 0 0 20px rgba(0, 255, 136, 0.4);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Exo 2', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed; inset: 0;
+            background-image:
+                linear-gradient(rgba(0,245,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,245,255,0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none; z-index: 0;
+        }
+        body::after {
+            content: '';
+            position: fixed; top: -40%; left: -20%;
+            width: 60%; height: 80%;
+            background: radial-gradient(ellipse, rgba(124,58,237,0.07) 0%, transparent 70%);
+            pointer-events: none; z-index: 0;
+        }
+
+        .app {
+            position: relative; z-index: 1;
+            max-width: 960px; margin: 0 auto;
+            padding: 16px; min-height: 100vh;
+            display: flex; flex-direction: column; gap: 12px;
+        }
+
+        /* HEADER */
+        .header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 20px;
+            background: var(--panel); border: 1px solid var(--border);
+            border-radius: 16px; position: relative; overflow: hidden;
+        }
+        .header::before {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+            animation: scanline 3s linear infinite;
+        }
+        @keyframes scanline { 0%{transform:translateX(-100%)} 100%{transform:translateX(100%)} }
+
+        .pet-name {
+            font-family: 'Orbitron', monospace; font-weight: 900;
+            font-size: 1.6em; letter-spacing: 4px;
+            background: linear-gradient(135deg, var(--cyan), var(--pink));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .pet-status-label {
+            font-family: 'Share Tech Mono', monospace; font-size: 0.7em;
+            color: var(--muted); letter-spacing: 2px; margin-top: 2px;
+        }
+        .pet-status-label.alive { color: var(--green); }
+        .pet-status-label.dead  { color: var(--pink); }
+
+        .coins-badge {
+            display: flex; align-items: center; gap: 8px;
+            background: rgba(255,230,0,0.08); border: 1px solid rgba(255,230,0,0.3);
+            border-radius: 30px; padding: 8px 16px;
+            font-family: 'Orbitron', monospace; font-weight: 700;
+            font-size: 1.1em; color: var(--yellow);
+            box-shadow: 0 0 15px rgba(255,230,0,0.15);
+        }
+
+        /* DOS COLUMNAS */
+        .two-cols {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            align-items: start;
+        }
+        .col-left  { display: flex; flex-direction: column; gap: 12px; position: sticky; top: 16px; }
+        .col-right { display: flex; flex-direction: column; gap: 12px; }
+
+        /* PANTALLA */
+        .screen-wrap {
+            background: var(--panel); border: 1px solid var(--border);
+            border-radius: 20px; padding: 4px;
+        }
+        .screen {
+            background: linear-gradient(180deg,#0d1a14 0%,#0a1520 50%,#0d1020 100%);
+            border-radius: 16px; height: 240px;
+            position: relative; display: flex; align-items: center;
+            justify-content: center; overflow: hidden;
+        }
+        .screen::before {
+            content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 40%;
+            background:
+                linear-gradient(180deg,transparent 0%,rgba(0,245,255,0.04) 100%),
+                repeating-linear-gradient(90deg,rgba(0,245,255,0.06) 0px,rgba(0,245,255,0.06) 1px,transparent 1px,transparent 40px),
+                repeating-linear-gradient(0deg,rgba(0,245,255,0.06) 0px,rgba(0,245,255,0.06) 1px,transparent 1px,transparent 30px);
+        }
+        .stars { position:absolute; inset:0; overflow:hidden; pointer-events:none; }
+        .star {
+            position:absolute; width:2px; height:2px; background:white; border-radius:50%;
+            animation: twinkle 3s infinite alternate;
+        }
+        @keyframes twinkle { from{opacity:0.2} to{opacity:0.8} }
+
+        .pet-center {
+            position:relative; display:flex; flex-direction:column;
+            align-items:center; z-index:2; margin-bottom:52px;
+        }
+        #pet-avatar { font-size:80px; filter:drop-shadow(0 0 20px rgba(0,245,255,0.5)); transition:all 0.3s; }
+        #pet-fx { position:absolute; top:-20px; right:-30px; font-size:30px; opacity:0; z-index:10; pointer-events:none; }
+
+        .pet-idle  { animation: float 2.5s ease-in-out infinite; }
+        @keyframes float { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-12px) scale(1.02)} }
+        .anim-eat  { animation: chomp 0.4s ease-in-out 4; }
+        @keyframes chomp { 0%{transform:scale(1) rotate(0)} 50%{transform:scale(1.4) rotate(-15deg)} 100%{transform:scale(1) rotate(0)} }
+        .anim-play { animation: spin-jump 0.8s cubic-bezier(0.36,0.07,0.19,0.97); }
+        @keyframes spin-jump { 0%{transform:translateY(0) rotate(0) scale(1)} 40%{transform:translateY(-55px) rotate(180deg) scale(1.2)} 100%{transform:translateY(0) rotate(360deg) scale(1)} }
+        .anim-sleep { animation: sleep-bob 1s ease-in-out 2; }
+        @keyframes sleep-bob { 0%,100%{transform:rotate(0)} 50%{transform:rotate(-10deg) translateY(5px)} }
+        .pet-dead { filter:drop-shadow(0 0 10px rgba(255,45,120,0.4)) grayscale(0.8); animation:none !important; }
+        .room-night { filter:brightness(0.3) hue-rotate(200deg); }
+
+        .dialog-box {
+            position:absolute; bottom:10px; left:10px; right:10px;
+            background:rgba(0,0,0,0.7); border:1px solid rgba(0,245,255,0.3);
+            border-radius:10px; padding:9px 14px;
+            font-family:'Share Tech Mono',monospace; font-size:0.75em; color:var(--cyan);
+            z-index:3; backdrop-filter:blur(4px); text-align:center;
+            min-height:36px; display:flex; align-items:center; justify-content:center; gap:6px;
+        }
+        .dialog-box::before { content:'> '; opacity:0.5; flex-shrink:0; }
+
+        /* PANEL GENÉRICO */
+        .panel {
+            background:var(--panel); border:1px solid var(--border);
+            border-radius:16px; padding:16px;
+            display:flex; flex-direction:column; gap:12px;
+        }
+        .panel-title {
+            font-family:'Share Tech Mono',monospace; font-size:0.65em;
+            letter-spacing:3px; color:var(--muted); text-transform:uppercase;
+            border-bottom:1px solid var(--border); padding-bottom:8px;
+        }
+        .panel-title-row {
+            display:flex; align-items:center; justify-content:space-between;
+            border-bottom:1px solid var(--border); padding-bottom:8px;
+        }
+
+        /* STATS */
+        .stat-row { display:flex; align-items:center; gap:10px; }
+        .stat-icon { font-size:1em; width:20px; text-align:center; flex-shrink:0; }
+        .stat-label { font-size:0.72em; color:var(--muted); font-family:'Share Tech Mono',monospace; letter-spacing:1px; width:72px; flex-shrink:0; }
+        .stat-bar-wrap { flex:1; height:8px; background:rgba(255,255,255,0.05); border-radius:4px; overflow:hidden; }
+        .stat-bar-fill { height:100%; border-radius:4px; transition:width 0.5s cubic-bezier(0.4,0,0.2,1); position:relative; }
+        .stat-bar-fill::after { content:''; position:absolute; top:0; right:0; bottom:0; width:30%; background:rgba(255,255,255,0.3); border-radius:4px; }
+        .bar-hunger .stat-bar-fill  { background:linear-gradient(90deg,#ff6b35,#ff2d78); box-shadow:0 0 8px rgba(255,45,120,0.5); }
+        .bar-happy  .stat-bar-fill  { background:linear-gradient(90deg,#f093fb,#f5576c); box-shadow:0 0 8px rgba(245,87,108,0.5); }
+        .bar-energy .stat-bar-fill  { background:linear-gradient(90deg,#4facfe,#00f2fe); box-shadow:0 0 8px rgba(0,242,254,0.5); }
+        .stat-value { font-family:'Share Tech Mono',monospace; font-size:0.72em; color:var(--muted); width:30px; text-align:right; flex-shrink:0; }
+
+        /* ACCIONES */
+        .actions-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+        .action-btn {
+            position:relative; background:var(--panel2); border:1px solid var(--border);
+            border-radius:12px; padding:14px 12px; cursor:pointer;
+            transition:all 0.2s; overflow:hidden;
+            display:flex; flex-direction:column; align-items:flex-start; gap:3px;
+            color:var(--text); font-family:'Exo 2',sans-serif; text-align:left;
+        }
+        .action-btn::before { content:''; position:absolute; inset:0; opacity:0; transition:opacity 0.2s; }
+        .action-btn:active { transform:scale(0.96); }
+
+        .btn-pizza { border-color:rgba(255,230,0,0.3); }
+        .btn-pizza::before { background:radial-gradient(circle at 50% 50%,rgba(255,230,0,0.1),transparent 70%); }
+        .btn-pizza:hover { border-color:var(--yellow); box-shadow:0 0 20px rgba(255,230,0,0.2); }
+        .btn-pizza:hover::before { opacity:1; }
+
+        .btn-coffee { border-color:rgba(255,107,53,0.3); }
+        .btn-coffee::before { background:radial-gradient(circle at 50% 50%,rgba(255,107,53,0.1),transparent 70%); }
+        .btn-coffee:hover { border-color:#ff6b35; box-shadow:0 0 20px rgba(255,107,53,0.2); }
+        .btn-coffee:hover::before { opacity:1; }
+
+        .btn-play { border-color:rgba(0,255,136,0.3); }
+        .btn-play::before { background:radial-gradient(circle at 50% 50%,rgba(0,255,136,0.1),transparent 70%); }
+        .btn-play:hover { border-color:var(--green); box-shadow:var(--glow-green); }
+        .btn-play:hover::before { opacity:1; }
+
+        .btn-sleep { border-color:rgba(0,245,255,0.3); }
+        .btn-sleep::before { background:radial-gradient(circle at 50% 50%,rgba(0,245,255,0.1),transparent 70%); }
+        .btn-sleep:hover { border-color:var(--cyan); box-shadow:var(--glow-cyan); }
+        .btn-sleep:hover::before { opacity:1; }
+
+        .btn-emoji { font-size:1.6em; }
+        .btn-name  { font-size:0.85em; font-weight:600; }
+        .btn-sub   { font-size:0.68em; font-family:'Share Tech Mono',monospace; color:var(--muted); line-height:1.3; }
+        .btn-cost  { position:absolute; top:10px; right:10px; font-family:'Share Tech Mono',monospace; font-size:0.68em; color:var(--yellow); }
+
+        .btn-revive-full {
+            display:none; width:100%;
+            background:linear-gradient(135deg,#7c3aed,#ff2d78);
+            border:none; border-radius:12px; padding:16px;
+            font-family:'Orbitron',monospace; font-weight:700;
+            font-size:0.95em; letter-spacing:2px; color:white; cursor:pointer;
+            animation:pulse-glow 1.5s ease-in-out infinite;
+        }
+        @keyframes pulse-glow { 0%,100%{box-shadow:0 0 20px rgba(255,45,120,0.3)} 50%{box-shadow:0 0 40px rgba(255,45,120,0.6)} }
+        .btn-revive-full:active { transform:scale(0.97); }
+
+        /* LOGROS */
+        .medals-count {
+            font-family:'Share Tech Mono',monospace; font-size:0.7em; color:var(--yellow);
+            background:rgba(255,230,0,0.08); border:1px solid rgba(255,230,0,0.2);
+            border-radius:20px; padding:3px 10px;
+        }
+        .achievements-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+        .achievement-slot {
+            aspect-ratio:1; background:var(--panel2); border:1px solid var(--border);
+            border-radius:12px; display:flex; flex-direction:column;
+            align-items:center; justify-content:center; gap:4px; padding:8px 4px;
+            position:relative; overflow:hidden; transition:all 0.3s;
+        }
+        .achievement-slot.locked { opacity:0.35; }
+        .achievement-slot.unlocked { border-color:rgba(255,230,0,0.4); background:rgba(255,230,0,0.04); box-shadow:0 0 15px rgba(255,230,0,0.1); opacity:1; }
+        .achievement-slot.unlocked::before { content:''; position:absolute; inset:0; background:radial-gradient(circle at 50% 50%,rgba(255,230,0,0.08),transparent 70%); }
+        .achievement-slot.newly-unlocked { animation:medal-pop 0.6s cubic-bezier(0.36,0.07,0.19,0.97) forwards; }
+        @keyframes medal-pop { 0%{transform:scale(1)} 40%{transform:scale(1.2)} 70%{transform:scale(0.95)} 100%{transform:scale(1)} }
+        .achievement-emoji { font-size:1.6em; }
+        .achievement-name { font-family:'Share Tech Mono',monospace; font-size:0.52em; color:var(--muted); text-align:center; line-height:1.2; }
+        .achievement-slot.unlocked .achievement-name { color:var(--yellow); }
+
+        /* CONTADORES */
+        .counters-row { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+        .counter-card { background:var(--panel2); border:1px solid var(--border); border-radius:10px; padding:10px 6px; text-align:center; }
+        .counter-val { font-family:'Orbitron',monospace; font-size:1.4em; font-weight:700; color:var(--cyan); }
+        .counter-lbl { font-family:'Share Tech Mono',monospace; font-size:0.58em; color:var(--muted); letter-spacing:1px; margin-top:2px; }
+
+        .footer { text-align:center; font-family:'Share Tech Mono',monospace; font-size:0.6em; color:var(--muted); padding:8px; letter-spacing:2px; }
+
+        /* TOAST */
+        .achievement-toast {
+            position:fixed; top:20px; left:50%;
+            transform:translateX(-50%) translateY(-120px);
+            background:linear-gradient(135deg,rgba(255,230,0,0.15),rgba(255,107,53,0.15));
+            border:1px solid rgba(255,230,0,0.5); backdrop-filter:blur(12px);
+            border-radius:14px; padding:14px 24px;
+            font-family:'Share Tech Mono',monospace; font-size:0.85em; color:var(--yellow);
+            z-index:1000; text-align:center; box-shadow:0 0 30px rgba(255,230,0,0.2);
+            transition:transform 0.5s cubic-bezier(0.34,1.56,0.64,1); white-space:nowrap;
+        }
+        .achievement-toast.show { transform:translateX(-50%) translateY(0); }
+        .achievement-toast-title { font-size:0.7em; opacity:0.7; letter-spacing:2px; margin-bottom:4px; }
+
+        /* MOBILE */
+        @media (max-width: 640px) {
+            .two-cols { grid-template-columns:1fr; }
+            .col-left { position:static; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="achievement-toast" id="toast">
+    <div class="achievement-toast-title">✦ NUEVO LOGRO ✦</div>
+    <div id="toast-msg"></div>
+</div>
+
+<div class="app">
+
+    <header class="header">
+        <div>
+            <div class="pet-name" id="nombre-mascota">PIXEL</div>
+            <div class="pet-status-label alive" id="status-label">● SISTEMA ACTIVO</div>
+        </div>
+        <div class="coins-badge">💰 <span id="coin-counter">0</span></div>
+    </header>
+
+    <div class="two-cols">
+
+        <!-- COLUMNA IZQUIERDA -->
+        <div class="col-left">
+            <div class="screen-wrap">
+                <div class="screen" id="room-background">
+                    <div class="stars" id="stars-container"></div>
+                    <div class="pet-center">
+                        <div id="pet-container" class="pet-idle">
+                            <div id="pet-avatar">👾</div>
+                            <div id="pet-fx"></div>
+                        </div>
+                    </div>
+                    <div class="dialog-box"><span id="event-log">Sistema inicializado.</span></div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">// SEÑALES VITALES</div>
+                <div class="stat-row bar-hunger">
+                    <span class="stat-icon">🍖</span>
+                    <span class="stat-label">HAMBRE</span>
+                    <div class="stat-bar-wrap"><div class="stat-bar-fill" id="bar-hambre" style="width:50%"></div></div>
+                    <span class="stat-value" id="val-hambre">50</span>
+                </div>
+                <div class="stat-row bar-happy">
+                    <span class="stat-icon">💖</span>
+                    <span class="stat-label">FELICIDAD</span>
+                    <div class="stat-bar-wrap"><div class="stat-bar-fill" id="bar-felicidad" style="width:50%"></div></div>
+                    <span class="stat-value" id="val-felicidad">50</span>
+                </div>
+                <div class="stat-row bar-energy">
+                    <span class="stat-icon">⚡</span>
+                    <span class="stat-label">ENERGÍA</span>
+                    <div class="stat-bar-wrap"><div class="stat-bar-fill" id="bar-energia" style="width:100%"></div></div>
+                    <span class="stat-value" id="val-energia">100</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- COLUMNA DERECHA -->
+        <div class="col-right">
+            <div class="panel" id="control-buttons">
+                <div class="panel-title">// ACCIONES</div>
+                <div class="actions-grid">
+                    <button class="action-btn btn-pizza" onclick="realizarAccion('comprar/pizza')">
+                        <span class="btn-emoji">🍕</span>
+                        <span class="btn-name">Pizza</span>
+                        <span class="btn-sub">−40 hambre<br>+10 felicidad</span>
+                        <span class="btn-cost">30💰</span>
+                    </button>
+                    <button class="action-btn btn-coffee" onclick="realizarAccion('comprar/cafe')">
+                        <span class="btn-emoji">☕</span>
+                        <span class="btn-name">Café</span>
+                        <span class="btn-sub">+30 energía</span>
+                        <span class="btn-cost">15💰</span>
+                    </button>
+                    <button class="action-btn btn-play" onclick="realizarAccion('jugar')">
+                        <span class="btn-emoji">🎮</span>
+                        <span class="btn-name">Jugar</span>
+                        <span class="btn-sub">+15 felicidad<br>+10 hambre</span>
+                        <span class="btn-cost">+20💰</span>
+                    </button>
+                    <button class="action-btn btn-sleep" onclick="realizarAccion('dormir')">
+                        <span class="btn-emoji">💤</span>
+                        <span class="btn-name">Dormir</span>
+                        <span class="btn-sub">+100 energía<br>+15 hambre</span>
+                    </button>
+                </div>
+                <button class="btn-revive-full" id="btn-revive" onclick="realizarAccion('reiniciar')">✦ REVIVIR A PIXEL ✦</button>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title-row">
+                    <span class="panel-title" style="border:none;padding:0;">// LOGROS</span>
+                    <span class="medals-count">🏅 <span id="medal-count">0</span> / 6</span>
+                </div>
+                <div class="achievements-grid" id="achievements-grid"></div>
+                <div class="counters-row">
+                    <div class="counter-card">
+                        <div class="counter-val" id="cnt-jugadas">0</div>
+                        <div class="counter-lbl">JUGADAS</div>
+                    </div>
+                    <div class="counter-card">
+                        <div class="counter-val" id="cnt-comidas">0</div>
+                        <div class="counter-lbl">COMIDAS</div>
+                    </div>
+                    <div class="counter-card">
+                        <div class="counter-val" id="cnt-dormidas">0</div>
+                        <div class="counter-lbl">DORMIDAS</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">API-GOTCHI v2.0 · MICROSERVICES EDITION</div>
+</div>
+
+<script>
+    const API_URL = '';
+
+    const LOGROS_CATALOGO = [
+        { id: 'Gamer Novato 🎮',  emoji: '🎮', nombre: 'Gamer\nNovato'   },
+        { id: 'Glotón 🍔',        emoji: '🍔', nombre: 'Glotón'          },
+        { id: 'Adicto al Café ☕', emoji: '☕', nombre: 'Adicto\nal Café' },
+        { id: 'Dormilón 😴',      emoji: '😴', nombre: 'Dormilón'        },
+        { id: 'Millonario 💎',    emoji: '💎', nombre: 'Millonario'      },
+        { id: 'Superviviente 🌟', emoji: '🌟', nombre: 'Superviviente'   },
+    ];
+
+    const elNombre       = document.getElementById('nombre-mascota');
+    const elAvatar       = document.getElementById('pet-avatar');
+    const elContenedor   = document.getElementById('pet-container');
+    const elLog          = document.getElementById('event-log');
+    const elFx           = document.getElementById('pet-fx');
+    const elMonedas      = document.getElementById('coin-counter');
+    const roomBg         = document.getElementById('room-background');
+    const statusLabel    = document.getElementById('status-label');
+    const panelControles = document.getElementById('control-buttons');
+    const btnRevivir     = document.getElementById('btn-revive');
+    const toast          = document.getElementById('toast');
+    const toastMsg       = document.getElementById('toast-msg');
+
+    const barHambre    = document.getElementById('bar-hambre');
+    const barFelicidad = document.getElementById('bar-felicidad');
+    const barEnergia   = document.getElementById('bar-energia');
+    const valHambre    = document.getElementById('val-hambre');
+    const valFelicidad = document.getElementById('val-felicidad');
+    const valEnergia   = document.getElementById('val-energia');
+
+    const achievementsGrid = document.getElementById('achievements-grid');
+    const medalCount  = document.getElementById('medal-count');
+    const cntJugadas  = document.getElementById('cnt-jugadas');
+    const cntComidas  = document.getElementById('cnt-comidas');
+    const cntDormidas = document.getElementById('cnt-dormidas');
+
+    function generarEstrellas() {
+        const c = document.getElementById('stars-container');
+        for (let i = 0; i < 30; i++) {
+            const s = document.createElement('div');
+            s.className = 'star';
+            s.style.cssText = `left:${Math.random()*100}%;top:${Math.random()*60}%;
+                animation-delay:${Math.random()*3}s;animation-duration:${2+Math.random()*2}s;
+                opacity:${0.2+Math.random()*0.5};width:${1+Math.random()*2}px;height:${1+Math.random()*2}px;`;
+            c.appendChild(s);
+        }
+    }
+
+    function inicializarLogros() {
+        achievementsGrid.innerHTML = '';
+        LOGROS_CATALOGO.forEach(l => {
+            const slot = document.createElement('div');
+            slot.className = 'achievement-slot locked';
+            slot.id = `logro-${l.id.replace(/[^a-zA-Z0-9]/g,'')}`;
+            slot.innerHTML = `<span class="achievement-emoji">${l.emoji}</span>
+                              <span class="achievement-name">${l.nombre}</span>`;
+            achievementsGrid.appendChild(slot);
+        });
+    }
+
+    function actualizarLogros(medallas, nuevo_logro) {
+        let count = 0;
+        LOGROS_CATALOGO.forEach(l => {
+            const slot = document.getElementById(`logro-${l.id.replace(/[^a-zA-Z0-9]/g,'')}`);
+            if (!slot) return;
+            const ok = medallas && medallas.includes(l.id);
+            if (ok) {
+                count++;
+                slot.classList.remove('locked');
+                slot.classList.add('unlocked');
+                if (l.id === nuevo_logro) {
+                    slot.classList.remove('newly-unlocked');
+                    void slot.offsetWidth;
+                    slot.classList.add('newly-unlocked');
+                }
+            } else {
+                slot.classList.add('locked');
+                slot.classList.remove('unlocked','newly-unlocked');
+            }
+        });
+        medalCount.textContent = count;
+    }
+
+    let toastTimer;
+    function mostrarToast(txt) {
+        clearTimeout(toastTimer);
+        toastMsg.textContent = txt;
+        toast.classList.add('show');
+        toastTimer = setTimeout(() => toast.classList.remove('show'), 3500);
+    }
+
+    async function obtenerEstado() {
+        try {
+            const r = await fetch(`${API_URL}/estado`);
+            const json = await r.json();
+            actualizarUI(json.data);
+        } catch { mostrarMensaje('Error de conexión ❌'); }
+    }
+
+    async function realizarAccion(accion) {
+        try {
+            const r = await fetch(`${API_URL}/${accion}`, { method: 'POST' });
+            const json = await r.json();
+            if (r.ok) {
+                mostrarMensaje(json.mensaje);
+                if (accion !== 'reiniciar') dispararAnimacion(accion);
+                const delay = accion === 'reiniciar' ? 0 : 500;
+                setTimeout(() => {
+                    actualizarUI(json.data);
+                    if (json.nuevo_logro) mostrarToast(json.nuevo_logro);
+                }, delay);
+            } else {
+                mostrarMensaje(`⚠️ ${json.detail}`);
+                dispararEfecto('❓');
+            }
+        } catch { mostrarMensaje('Error en el servidor 🔌'); }
+    }
+
+    function actualizarUI(mascota) {
+        elNombre.textContent  = mascota.nombre || 'PIXEL';
+        elMonedas.textContent = mascota.monedas ?? 0;
+
+        const h = mascota.hambre    ?? 0;
+        const f = mascota.felicidad ?? 0;
+        const e = mascota.energia   ?? 0;
+        barHambre.style.width    = h + '%';
+        barFelicidad.style.width = f + '%';
+        barEnergia.style.width   = e + '%';
+        valHambre.textContent    = h;
+        valFelicidad.textContent = f;
+        valEnergia.textContent   = e;
+
+        actualizarLogros(mascota.medallas, null);
+
+        // Los contadores vienen en mascota.estadisticas
+        // El gateway debe incluirlos — ver nota abajo
+        if (mascota.estadisticas) {
+            cntJugadas.textContent  = mascota.estadisticas.jugadas  ?? 0;
+            cntComidas.textContent  = mascota.estadisticas.comidas  ?? 0;
+            cntDormidas.textContent = mascota.estadisticas.dormidas ?? 0;
+        }
+
+        if (mascota.estado === 'fallecido') {
+            elAvatar.textContent = '🪦';
+            elContenedor.className = 'pet-dead';
+            statusLabel.textContent = '● SISTEMA OFFLINE';
+            statusLabel.className = 'pet-status-label dead';
+            panelControles.querySelector('.actions-grid').style.display = 'none';
+            btnRevivir.style.display = 'block';
+        } else {
+            elAvatar.textContent = '👾';
+            elContenedor.className = 'pet-idle';
+            statusLabel.textContent = '● SISTEMA ACTIVO';
+            statusLabel.className = 'pet-status-label alive';
+            panelControles.querySelector('.actions-grid').style.display = 'grid';
+            btnRevivir.style.display = 'none';
+            roomBg.classList.remove('room-night');
+        }
+    }
+
+    function mostrarMensaje(msg) { elLog.textContent = msg; }
+
+    function dispararAnimacion(accion) {
+        elContenedor.classList.remove('pet-idle','anim-eat','anim-play','anim-sleep');
+        void elContenedor.offsetWidth;
+        if      (accion.startsWith('comprar/pizza')) { elContenedor.classList.add('anim-eat');   dispararEfecto('🍕'); }
+        else if (accion.startsWith('comprar/cafe'))  { elContenedor.classList.add('anim-eat');   dispararEfecto('☕'); }
+        else if (accion === 'jugar')                 { elContenedor.classList.add('anim-play');  dispararEfecto('✨'); }
+        else if (accion === 'dormir') {
+            elContenedor.classList.add('anim-sleep');
+            roomBg.classList.add('room-night');
+            dispararEfecto('💤');
+        }
+        setTimeout(() => {
+            elContenedor.className = 'pet-idle';
+            if (accion === 'dormir') roomBg.classList.remove('room-night');
+        }, 1500);
+    }
+
+    function dispararEfecto(emoji) {
+        elFx.textContent = emoji;
+        elFx.style.transition = 'none';
+        elFx.style.opacity = '1';
+        elFx.style.transform = 'translateY(0) scale(1)';
+        requestAnimationFrame(() => {
+            elFx.style.transition = 'all 1.2s cubic-bezier(0.4,0,0.2,1)';
+            elFx.style.transform = 'translateY(-50px) scale(1.4)';
+            elFx.style.opacity = '0';
+        });
+        setTimeout(() => { elFx.style.transform = 'translateY(0)'; }, 1200);
+    }
+
+    generarEstrellas();
+    inicializarLogros();
+    obtenerEstado();
+</script>
+</body>
+</html>

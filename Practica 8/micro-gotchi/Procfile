@@ -1,0 +1,5 @@
+gateway:    uvicorn gateway:app --port 8000 --reload
+vitales:    uvicorn servicio_vitales:app --port 8001
+economia:   uvicorn servicio_economia:app --port 8002
+inventario: uvicorn servicio_inventario:app --port 8003
+logros:     uvicorn servicio_logros:app --port 8004

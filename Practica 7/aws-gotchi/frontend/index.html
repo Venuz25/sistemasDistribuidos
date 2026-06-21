@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Mi API-gotchi</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#FFB6C1">
+</head>
+<body>
+    <div class="game-console">
+        <header>
+            <h1 id="nombre-mascota">Cargando...</h1>
+        </header>
+
+        <div class="screen-border">
+            <div id="room-background" class="screen">
+                <div id="pet-container" class="pet-idle">
+                    <div id="pet-avatar">👾</div>
+                    <div id="pet-fx"></div> 
+                </div>
+                
+                <div class="dialog-box">
+                    <p id="event-log">¡Hola! Listo para jugar.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-container">
+            <div class="stat">
+                <span>🍖 Hambre</span>
+                <progress id="bar-hambre" value="0" max="100" class="bar-orange"></progress>
+            </div>
+            <div class="stat">
+                <span>💖 Felicidad</span>
+                <progress id="bar-felicidad" value="0" max="100" class="bar-pink"></progress>
+            </div>
+            <div class="stat">
+                <span>⚡ Energía</span>
+                <progress id="bar-energia" value="0" max="100" class="bar-blue"></progress>
+            </div>
+        </div>
+
+        <div class="controls" id="control-buttons">
+            <button class="btn-eat" onclick="realizarAccion('alimentar')">Comer</button>
+            <button class="btn-play" onclick="realizarAccion('jugar')">Jugar</button>
+            <button class="btn-sleep" onclick="realizarAccion('dormir')">Dormir</button>
+        </div>
+        
+        <button id="btn-revive" class="btn-revive" onclick="realizarAccion('reiniciar')" style="display: none;">✨ Revivir a Pixel ✨</button>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
